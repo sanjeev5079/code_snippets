@@ -1,0 +1,29 @@
+learnings: dataframe aggregate function
+ 
+code:
+---------------------------------------------------------------
+ 
+//event log schema
+case class eventLogSchema(id:String, event:String, timestamp:String)
+ 
+//load the data, apply the schema anc convert to data frame.
+val eventsDF = sc.textFile("/user/chandbx/test/eventtest/eventdatafile.txt").map(x => x.split("\\|")).map(x => eventLogSchema(x(0),x(1),x(2))).toDF
+ 
+//group by id and event and get the max of time stamp field for the group.
+val maxtsEventDF = eventsDF.groupBy($"id", $"event").agg(Map("timestamp" -> "max")).withColumnRenamed("max(timestamp)","maxofts" )
+
+//1 - add new column "featuredate" -  a user supplied value. 2 - add new column "daysince" - difference between fields "featuredate" and "maxofts".3 - drop column "maxofts"
+val resultantDF = maxtsEventDF.withColumn("featuredate", lit("20170731")).withColumn("daysince", $"featuredate" - $"maxofts").drop($"maxofts")
+===================================
+ 
+sample input:
+---------------------------------------------------------------
+ 
+100|e1|20170725
+100|e1|20170720
+100|e2|20170711
+101|e1|20170720
+101|e2|20170711
+101|e2|20170712
+102|e3|20170726
+===================================
